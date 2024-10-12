@@ -7,7 +7,7 @@
     "main": "./dist/index.js",
     "author": "TAEMBO",
     "scripts": {
-        "build": "npm run lint && tsc",
+        "build": "pnpm lint && tsc",
         "deploy": "node --env-file=.env dist/deployCommands.js",
         "deployDev": "node --env-file=.env.dev dist/deployCommands.js",
         "dev": "node --env-file=.env.dev dist/index.js",
