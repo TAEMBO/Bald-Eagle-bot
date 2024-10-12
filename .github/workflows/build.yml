@@ -1,0 +1,29 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - "main"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: latest
+
+      - name: PNPM
+        uses: pnpm/action-setup@v2
+        with:
+          version: latest
+
+      - name: Installation
+        run: pnpm i --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Build
+        run: tsc
