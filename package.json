@@ -21,7 +21,8 @@
     },
     "dependencies": {
         "@discordjs/core": "^2.0.0",
-        "discord.js": "^14.16.2"
+        "discord.js": "^14.16.2",
+        "xml-js": "^1.6.11"
     },
     "devDependencies": {
         "@eslint/js": "^9.9.1",
