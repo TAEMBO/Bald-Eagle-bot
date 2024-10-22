@@ -1,4 +1,4 @@
-import { roleMention, type Client } from "discord.js";
+import { ChannelType, roleMention, type Client } from "discord.js";
 import { jsonFromXML, log, NEW_UPLOADS_CHANNEL_ID, NOTIFICATIONS_ROLE_ID } from "#util";
 import type { YTCacheFeed } from "#types";
 
@@ -31,7 +31,9 @@ export async function ytLoop(client: Client) {
 
     const channel = client.channels.cache.get(NEW_UPLOADS_CHANNEL_ID);
 
-    if (!channel?.isSendable()) return log("Red", "Unable to send YTLoop notification to channel");
+    if (channel?.type !== ChannelType.GuildAnnouncement) return log("Red", "Unable to send YTLoop notification to channel");
 
-    await channel.send(`${roleMention(NOTIFICATIONS_ROLE_ID)}\n${latestVid.link._attributes.href}`);
+    const msg = await channel.send(`${roleMention(NOTIFICATIONS_ROLE_ID)}\n${latestVid.link._attributes.href}`);
+
+    await msg.crosspost();
 }
