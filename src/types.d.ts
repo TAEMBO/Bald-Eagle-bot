@@ -85,3 +85,42 @@ export interface YTCacheFeed {
         readonly entry: YTCacheFeedEntry[];
     };
 }
+
+export interface YTFeedData {
+    readonly feed: {
+        readonly link: [
+            {
+                readonly _attributes: {
+                    readonly rel: string;
+                    readonly href: string;
+                };
+            },
+            {
+                readonly _attributes: {
+                    readonly rel: string;
+                    readonly href: string;
+                };
+            }
+        ];
+        readonly title: { readonly _text: string; };
+        readonly updated: { readonly _text: string; };
+        readonly entry: {
+            readonly id: { readonly _text: string; };
+            readonly "yt:videoId": { readonly _text: string; };
+            readonly "yt:channelId": { readonly _text: string; };
+            readonly title: { readonly _text: string; };
+            readonly link: {
+                readonly _attributes: {
+                    readonly rel: string;
+                    readonly href: string;
+                };
+            };
+            readonly author: {
+                readonly name: { readonly _text: string; };
+                readonly uri: { readonly _text: string; };
+            };
+            readonly published: { readonly _text: string; };
+            readonly updated: { readonly _text: string; };
+        };
+    };
+}
