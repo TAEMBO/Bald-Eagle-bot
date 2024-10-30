@@ -1,8 +1,10 @@
 import { AttachmentBuilder, ChannelType, type Client } from "discord.js";
 import { createHmac } from "node:crypto";
+import { URLSearchParams } from "node:url";
 import type { Request } from "express-serve-static-core";
+import cron from "node-cron";
 import polka from "polka";
-import { jsonFromXML, log } from "#util";
+import { formatTime, jsonFromXML, log } from "#util";
 import type { YTFeedData } from "#types";
 
 async function parseBody(req: Request) {
@@ -18,12 +20,14 @@ export function ytFeed(client: Client) {
 
     server.get("/", (req, res) => {
         if (!req.query["hub.topic"] || !req.query["hub.mode"] || !req.query["hub.challenge"]) {
-            log("Yellow", "Invalid GET");
+            log("Yellow", "YTFeed invalid GET");
 
             return void res.writeHead(400).end();
         }
 
-        log("Green", "Valid GET, echoing");
+        const leaseTime = formatTime(parseInt(req.query["hub.lease_seconds"] as string, 10) * 1_000, 5);
+
+        log("Green", `YTFeed valid GET with ${leaseTime} lease time, echoing`);
 
         res.writeHead(200).end(req.query["hub.challenge"]);
     });
@@ -33,7 +37,7 @@ export function ytFeed(client: Client) {
         const signatureHeader = req.headers["x-hub-signature"];
 
         if (!signatureHeader || Array.isArray(signatureHeader)) {
-            log("Yellow", "Invalid YTFeed header");
+            log("Yellow", "YTFeed invalid header");
 
             return void res.writeHead(403).end();
         }
@@ -44,13 +48,13 @@ export function ytFeed(client: Client) {
         try {
             hmac = createHmac(algo, process.env.YT_FEED_SECRET!);
         } catch (e) {
-            log("Yellow", "Invalid YTFeed sig");
+            log("Yellow", "YTFeed invalid sig");
 
             return void res.writeHead(403).end();
         }
 
         if (hmac.update(rawBody).digest("hex").toLowerCase() !== signature) {
-            log("Yellow", "Mismatched YTFeed sig");
+            log("Yellow", "YTFeed mismatched sig");
 
             return void res.writeHead(403).end();
         }
@@ -61,12 +65,12 @@ export function ytFeed(client: Client) {
         const channel = client.channels.cache.get("1293725255294124032");
 
         if (channel?.type !== ChannelType.GuildText) {
-            log("Red", "Invalid YTFeed channel:", channel?.type);
+            log("Red", "YTFeed invalid channel:", channel?.type);
 
             return void res.end();
         }
 
-        log("Green", "Valid POST, notifying");
+        log("Green", "YTFeed valid POST, notifying");
 
         await channel.send({
             content: data.feed.entry.link._attributes.href,
@@ -76,5 +80,26 @@ export function ytFeed(client: Client) {
         res.end();
     });
 
-    server.listen(process.env.YT_FEED_PORT!, () => log("Purple", "YT Feed listening on port", process.env.YT_FEED_PORT));
+    server.listen(process.env.YT_FEED_PORT!, () => log("Purple", "YTFeed listening on port", process.env.YT_FEED_PORT));
+
+    cron.schedule("0 0 * * WED", async () => {
+        for (const channelId of process.env.YT_FEED_CHANNELIDS!.split(":")) {
+            const res = await fetch(
+                "https://pubsubhubbub.appspot.com/subscribe",
+                {
+                    method: "POST",
+                    body: new URLSearchParams({
+                        "hub.callback": process.env.YT_FEED_CALLBACK!,
+                        "hub.topic": "https://www.youtube.com/xml/feeds/videos.xml?channel_id=" + channelId,
+                        "hub.verify": "sync",
+                        "hub.mode": "subscribe",
+                        "hub.secret": process.env.YT_FEED_SECRET!,
+                        "hub.lease_seconds": "864000"
+                    })
+                }
+            );
+            
+            log("Yellow", `YTFeed lease renew for ${channelId}:`, res.status);
+        }
+    }, { timezone: "UTC" });
 }
