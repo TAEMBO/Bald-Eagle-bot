@@ -5,6 +5,7 @@ declare module "discord.js" {
     interface Client {
         readonly chatInputCommands: Collection<string, Command<"chatInput">>;
         readonly contextMenuCommands: Collection<string, Command<"message" | "user">>;
+        readonly cachedVideoIds: Set<string>;
         ytCache: string | null;
     }
 }

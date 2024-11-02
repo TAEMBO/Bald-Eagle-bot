@@ -59,25 +59,32 @@ export function ytFeed(client: Client) {
             return void res.writeHead(403).end();
         }
 
-        res.writeHead(200);
+        res.writeHead(200).end();
 
         const data = jsonFromXML<YTFeedData>(rawBody);
-        const channel = client.channels.cache.get("1293725255294124032");
+        const videoId = data.feed.entry["yt:videoId"]._text;
+        const publishUnix = new Date(data.feed.entry.published._text).getTime();
 
-        if (channel?.type !== ChannelType.GuildText) {
-            log("Red", "YTFeed invalid channel:", channel?.type);
+        if ((Date.now() - publishUnix) > 300_000) {
+            log("Yellow", `Skipped ${videoId}; age over 5 minutes`);
+        } else if (client.cachedVideoIds.has(videoId)) {
+            log("Yellow", `Skipped ${videoId}; already cached`);
+        } else {
+            client.cachedVideoIds.add(videoId);
 
-            return void res.end();
+            setTimeout(() => client.cachedVideoIds.delete(videoId), 300_000);
+
+            const channel = client.channels.cache.get("1293725255294124032");
+            
+            if (channel?.type !== ChannelType.GuildText) return log("Red", "YTFeed invalid channel:", channel?.type);
+            
+            log("Green", "YTFeed valid POST, notifying");
+            
+            await channel.send({
+                content: data.feed.entry.link._attributes.href,
+                files: [new AttachmentBuilder(Buffer.from(JSON.stringify(data, null, 4)), { name: "data.json" })]
+            });
         }
-
-        log("Green", "YTFeed valid POST, notifying");
-
-        await channel.send({
-            content: data.feed.entry.link._attributes.href,
-            files: [new AttachmentBuilder(Buffer.from(JSON.stringify(data, null, 4)), { name: "data.json" })]
-        });
-
-        res.end();
     });
 
     server.listen(process.env.YT_FEED_PORT!, () => log("Purple", "YTFeed listening on port", process.env.YT_FEED_PORT));
