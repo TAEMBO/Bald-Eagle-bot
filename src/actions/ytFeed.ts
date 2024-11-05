@@ -1,10 +1,10 @@
-import { AttachmentBuilder, ChannelType, type Client } from "discord.js";
+import { ChannelType, roleMention, type Client } from "discord.js";
 import { createHmac } from "node:crypto";
 import { URLSearchParams } from "node:url";
 import type { Request } from "express-serve-static-core";
 import cron from "node-cron";
 import polka from "polka";
-import { formatTime, jsonFromXML, log } from "#util";
+import { formatTime, jsonFromXML, log, NEW_UPLOADS_CHANNEL_ID, NOTIFICATIONS_ROLE_ID } from "#util";
 import type { YTFeedData } from "#types";
 
 async function parseBody(req: Request) {
@@ -67,23 +67,20 @@ export function ytFeed(client: Client) {
 
         if ((Date.now() - publishUnix) > 300_000) {
             log("Yellow", `Skipped ${videoId}; age over 5 minutes`);
-        } else if (client.cachedVideoIds.has(videoId)) {
+        } else if (client.ytCache.has(videoId)) {
             log("Yellow", `Skipped ${videoId}; already cached`);
         } else {
-            client.cachedVideoIds.add(videoId);
+            client.ytCache.add(videoId);
 
-            setTimeout(() => client.cachedVideoIds.delete(videoId), 300_000);
+            setTimeout(() => client.ytCache.delete(videoId), 300_000);
 
-            const channel = client.channels.cache.get("1293725255294124032");
-            
-            if (channel?.type !== ChannelType.GuildText) return log("Red", "YTFeed invalid channel:", channel?.type);
-            
-            log("Green", "YTFeed valid POST, notifying");
-            
-            await channel.send({
-                content: data.feed.entry.link._attributes.href,
-                files: [new AttachmentBuilder(Buffer.from(JSON.stringify(data, null, 4)), { name: "data.json" })]
-            });
+            const channel = client.channels.cache.get(NEW_UPLOADS_CHANNEL_ID);
+
+            if (channel?.type !== ChannelType.GuildAnnouncement) return log("Red", "YTFeed invalid channel:", channel?.type);
+        
+            const msg = await channel.send(`${roleMention(NOTIFICATIONS_ROLE_ID)}\n${data.feed.entry.link._attributes.href}`);
+        
+            await msg.crosspost();
         }
     });
 

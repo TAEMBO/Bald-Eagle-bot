@@ -1,7 +1,7 @@
 import { Event } from "#structures";
 import { log } from "#util";
 import { Events } from "discord.js";
-import { ytFeed, ytLoop } from "#actions";
+import { ytFeed } from "#actions";
 
 export default new Event({
     name: Events.ClientReady,
@@ -10,7 +10,5 @@ export default new Event({
         log("Blue", `Bot active as ${client.user.tag}`);
 
         ytFeed(client);
-
-        setInterval(ytLoop, 600_000, client);
     }
 });

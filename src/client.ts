@@ -4,8 +4,7 @@ import type { Command } from "#structures";
 export class TClient extends Client<true> {
     public readonly chatInputCommands = new Collection<string, Command<"chatInput">>();
     public readonly contextMenuCommands = new Collection<string, Command<"message" | "user">>();
-    public readonly cachedVideoIds = new Set<string>();
-    public ytCache = null;
+    public readonly ytCache = new Set<string>();
 
     public constructor() {
         super({
