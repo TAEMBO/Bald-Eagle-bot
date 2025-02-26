@@ -11,6 +11,12 @@ declare module "discord.js" {
 
 export type CombinedContextMenuCommandInteraction = MessageContextMenuCommandInteraction<"cached"> | UserContextMenuCommandInteraction<"cached">;
 
+interface EntryLink {
+    readonly _attributes: {
+        readonly rel: string;
+        readonly href: string;
+    };
+}
 export interface YTFeedData {
     readonly feed: {
         readonly link: [
@@ -34,12 +40,7 @@ export interface YTFeedData {
             readonly "yt:videoId": { readonly _text: string; };
             readonly "yt:channelId": { readonly _text: string; };
             readonly title: { readonly _text: string; };
-            readonly link: {
-                readonly _attributes: {
-                    readonly rel: string;
-                    readonly href: string;
-                };
-            };
+            readonly link: EntryLink | EntryLink[];
             readonly author: {
                 readonly name: { readonly _text: string; };
                 readonly uri: { readonly _text: string; };

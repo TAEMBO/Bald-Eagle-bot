@@ -77,8 +77,9 @@ export function ytFeed(client: Client) {
             const channel = client.channels.cache.get(NEW_UPLOADS_CHANNEL_ID);
 
             if (channel?.type !== ChannelType.GuildAnnouncement) return log("Red", "YTFeed invalid channel:", channel?.type);
-        
-            const msg = await channel.send(`${roleMention(NOTIFICATIONS_ROLE_ID)}\n${data.feed.entry.link._attributes.href}`);
+
+            const videoURL = (Array.isArray(data.feed.entry.link) ? data.feed.entry.link[0] : data.feed.entry.link)._attributes.href;
+            const msg = await channel.send(`${roleMention(NOTIFICATIONS_ROLE_ID)}\n${videoURL}`);
         
             await msg.crosspost();
         }
