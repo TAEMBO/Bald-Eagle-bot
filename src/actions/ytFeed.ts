@@ -15,6 +15,8 @@ async function parseBody(req: Request) {
     return data;
 }
 
+const MAX_CACHE_AGE = 86_400_000;
+
 export function ytFeed(client: Client) {
     const server = polka();
 
@@ -65,24 +67,22 @@ export function ytFeed(client: Client) {
         const videoId = data.feed.entry["yt:videoId"]._text;
         const publishUnix = new Date(data.feed.entry.published._text).getTime();
 
-        if ((Date.now() - publishUnix) > 300_000) {
-            log("Yellow", `Skipped ${videoId}; age over 5 minutes`);
-        } else if (client.ytCache.has(videoId)) {
-            log("Yellow", `Skipped ${videoId}; already cached`);
-        } else {
-            client.ytCache.add(videoId);
-
-            setTimeout(() => client.ytCache.delete(videoId), 300_000);
-
-            const channel = client.channels.cache.get(NEW_UPLOADS_CHANNEL_ID);
-
-            if (channel?.type !== ChannelType.GuildAnnouncement) return log("Red", "YTFeed invalid channel:", channel?.type);
-
-            const videoURL = (Array.isArray(data.feed.entry.link) ? data.feed.entry.link[0] : data.feed.entry.link)._attributes.href;
-            const msg = await channel.send(`${roleMention(NOTIFICATIONS_ROLE_ID)}\n${videoURL}`);
+        if ((Date.now() - publishUnix) > MAX_CACHE_AGE) return log("Yellow", `Skipped ${videoId}; age over ${MAX_CACHE_AGE.toLocaleString()}ms`);
         
-            await msg.crosspost();
-        }
+        if (client.ytCache.has(videoId)) return log("Yellow", `Skipped ${videoId}; already cached`);
+
+        client.ytCache.add(videoId);
+
+        setTimeout(() => client.ytCache.delete(videoId), MAX_CACHE_AGE);
+
+        const channel = client.channels.cache.get(NEW_UPLOADS_CHANNEL_ID);
+
+        if (channel?.type !== ChannelType.GuildAnnouncement) return log("Red", "YTFeed invalid channel:", channel?.type);
+
+        const videoURL = (Array.isArray(data.feed.entry.link) ? data.feed.entry.link[0] : data.feed.entry.link)._attributes.href;
+        const msg = await channel.send(`${roleMention(NOTIFICATIONS_ROLE_ID)}\n${videoURL}`);
+        
+        await msg.crosspost();
     });
 
     server.listen(process.env.YT_FEED_PORT!, () => log("Purple", "YTFeed listening on port", process.env.YT_FEED_PORT));
